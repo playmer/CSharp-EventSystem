@@ -6,36 +6,7 @@ using System.Threading.Tasks;
 
 namespace EventSystem
 {
-  class Caster
-  {
-    void Invoke(Event aEvent)
-    {
-
-    }
-  }
-
-  struct CastingCaller<EventType> : Caster
-  {
-    static void Caster(Event aEvent, Delegate.Caller aCaller)
-    {
-
-    }
-
-    public delegate void Caller(Event aEvent);
-    Caller mCaller;
-  }
-
-  struct Delegate
-  {
-    public void Invoke(Event aEvent)
-    {
-      mCaster(aEvent);
-    }
-
-    Caster mCaster;
-  }
-
-  public class IntrusiveList<TemplateType>
+  public class IntrusiveList<TemplateType> : IEnumerable<TemplateType>
   {
     public class Hook
     {
@@ -74,6 +45,16 @@ namespace EventSystem
       public Hook mPrevious;
     }
 
+    IEnumerator<TemplateType> IEnumerable<TemplateType>.GetEnumerator()
+    {
+      return (IEnumerator<TemplateType>)GetEnumerator();
+    }
+
+    public IntrusiveListEnum<TemplateType> GetEnumerator()
+    {
+      return new IntrusiveListEnum<TemplateType>(mHead);
+    }
+
     public void InsertFront(Hook aHook)
     {
       aHook.InsertAfter(mHead);
@@ -97,6 +78,74 @@ namespace EventSystem
     public Hook mHead;
   }
 
+  public class IntrusiveListEnum<TemplateType> : IEnumerator<TemplateType>
+  {
+    // Enumerators are positioned before the first element
+    // until the first MoveNext() call.
+    IntrusiveList<TemplateType>.Hook mCurrent;
+    IntrusiveList<TemplateType>.Hook mHead;
+
+    public IntrusiveListEnum(IntrusiveList<TemplateType>.Hook aHead)
+    {
+      mHead = aHead;
+      mCurrent = mHead.mPrevious;
+    }
+
+    public bool MoveNext()
+    {
+      mCurrent = mCurrent.mNext;
+      return true;
+    }
+
+    public void Reset()
+    {
+      mCurrent = mHead.mPrevious;
+    }
+
+    //public void Dispose()
+    //{
+    //
+    //}
+
+    object IEnumerator<TemplateType>.Current
+    {
+      get
+      {
+        return Current;
+      }
+    }
+
+    public TemplateType Current
+    {
+      get
+      {
+        return mCurrent.mOwner;
+      }
+    }
+  }
+
+
+  public abstract class Caster
+  {
+    public abstract void Invoke(Event aEvent);
+  }
+
+  class CastingCaller<EventType> : Caster where EventType : Event
+  {
+    public override void Invoke(Event aEvent)
+    {
+      mCaller(aEvent as EventType);
+    }
+
+    static void Calling(Event aEvent)
+    {
+      
+    }
+
+    public delegate void Caller(EventType aEvent);
+    Caller mCaller;
+  }
+
   public class Event
   {
   }
@@ -108,7 +157,7 @@ namespace EventSystem
 
   public class EventHandler
   {
-    
+    Dictionary<String, List<Caster>> mEventLists;
   }
 
   class Program
